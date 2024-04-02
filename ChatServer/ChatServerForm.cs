@@ -3,30 +3,232 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
-using System.Net.Http;
+using static ChatServer.ChatServerForm;
+
 
 namespace ChatServer
-{
+{ 
 
     public partial class ChatServerForm : Form
     {
-        TcpListener server_socket;
-        TcpClient? client_socket = default;
-        Thread m_client_th;
-        bool conn_thread_bool = false;
+        public const int WSA_CANCEL_BLOCKING_CALL_ERROR_CODE = 10004;
 
-        private static Dictionary<int, TcpClient> client_list = [];
+        public class RESTAPIManager()
+        {
+            string create_edit_api_url = "https://localhost:8080/api/Client/CreateEdit";
+            HttpClient rest_api_client = new();
+
+            public async void UploadClienttoRESTAPI(ClientManager client_manager)
+            {
+                var data = new { id = 0, port = client_manager.connected_port};
+                var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(data), System.Text.Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await rest_api_client.PostAsync(create_edit_api_url, content);
+                CheckResponse(response);
+            }
+
+            public void CheckResponse(HttpResponseMessage response)
+            {
+                if (response.IsSuccessStatusCode)
+                {
+                    UpdateOpenChatTextBox("Client added to server");
+                }
+                else
+                {
+                    UpdateOpenChatTextBox($"Error: {response.StatusCode}");
+                }
+            }
+
+        }
+
+        public class ServerManager()
+        {
+            ClientManager client_manager;
+            RESTAPIManager rest_api_manager;
+
+            TcpListener server_socket;
+            bool isAcceptingClientConnection = false;
+            Thread m_accept_client_connection_th;
+            IPAddress m_ip_address;
+            int m_port;
+
+            private bool isIPAddressSet = false;
+            private bool isPortSet = false;
+
+
+            public void StartAcceptingClientConnection()
+            {
+                isAcceptingClientConnection = true;
+            }
+
+            public void StopAcceptingClientConnection()
+            {
+                isAcceptingClientConnection = false;
+            }
+
+            public void SetIPAddress()
+            {
+                if (IPAddressTextBox.Text == "")
+                {
+                    IPAddressTextBox.Text = "127.0.0.1";
+                }
+
+                m_ip_address = IPAddress.Parse(IPAddressTextBox.Text);
+
+                isIPAddressSet = true;
+            }
+
+            public void SetPort()
+            {
+                if (PortTextBox.Text == "")
+                {
+                    PortTextBox.Text = "8888";
+                }
+
+                m_port = int.Parse(PortTextBox.Text);
+
+                isPortSet = true;
+            }
+
+            public void StartChatServer()
+            {
+                UpdateOpenChatTextBox("Starting chat server.");
+                SetIPAddress();
+                SetPort();
+
+                isAcceptingClientConnection = true;
+                
+                server_socket = new(m_ip_address, m_port);
+                server_socket.Start();
+
+                m_accept_client_connection_th = new(AcceptClientConnection);
+                m_accept_client_connection_th.Start();
+            }
+
+            private async void AcceptClientConnection()
+            {
+                while (isAcceptingClientConnection)
+                {
+                    try
+                    {
+                        TcpClient new_client_socket = server_socket.AcceptTcpClient();
+                        client_manager = new(new_client_socket);
+                    }
+                    catch (SocketException ex) when (ex.ErrorCode == WSA_CANCEL_BLOCKING_CALL_ERROR_CODE) // 10004
+                    {
+                        UpdateOpenChatTextBox("Pending connection handled.");
+                        break;
+                    }
+
+                    UpdateOpenChatTextBox($"Client connected on port {client_manager.connected_port}");
+                    rest_api_manager.UploadClienttoRESTAPI(client_manager);
+
+                    client_list.Add(client_manager);
+
+                    string welcome_msg = "Welcome to the chat server, Client " + client_manager.connected_port + "!";
+                    string message_to_send = CreateJsonMessage(m_port, client_manager.connected_port, welcome_msg);
+                    client_manager.SendMessageToClient(message_to_send);
+
+                    client_manager.SetStreamReader();
+                    client_manager.StartHandlingCommunication();
+                }
+            }
+
+        }
+        public class ClientManager
+        {
+            static TcpClient client_socket;
+            StreamReader reader;
+            public int connected_port;
+            private bool isHandlingCommunication = false;
+            NetworkStream network_stream = client_socket.GetStream();
+            Thread handle_communucation_th;
+
+            public ClientManager(TcpClient new_client_socket)
+            {
+                client_socket = new_client_socket;
+                IPEndPoint temp_client_end_point = (IPEndPoint)client_socket.Client.RemoteEndPoint;
+                connected_port = temp_client_end_point.Port; 
+            }
+
+            public void DisconnectConnection()
+            {
+                client_socket.Close();
+            }
+
+            public void SendMessageToClient(string message)
+            {
+                byte[] bytes_to_send = Encoding.ASCII.GetBytes(message);
+                network_stream.Write(bytes_to_send, 0, bytes_to_send.Length);
+                network_stream.Flush();
+            }
+
+            public void SetStreamReader()
+            {
+                reader = new StreamReader(client_socket.GetStream());
+            }
+
+            public void StartHandlingCommunication()
+            {
+                isHandlingCommunication = true;
+                handle_communucation_th = new(() => HandleCommunication());
+            }
+
+            public async void HandleCommunication()
+            {
+
+                while (isHandlingCommunication)
+                {
+                    string message = "";
+                    if (client_socket.Connected)
+                    {
+                        message = await reader.ReadLineAsync();
+                    }
+                    else
+                    {
+                        UpdateOpenChatTextBox("");
+                    }
+                    if (message != "")
+                    {
+                        Message received_message = ParseJsonMessage(message);
+                        string message_to_send = received_message.content;
+                        if (message_to_send == "DISCONNECT")
+                        {
+                            TcpClient recipient_client = client_list[received_message.receiver_id];
+                            recipient_client.Close();
+                            client_list.Remove(received_message.receiver_id);
+                            UpdateOpenChatTextBox("Client " + received_message.sender_id + " disconnected");
+                        }
+
+                        UpdateOpenChatTextBox("Message from : " + received_message.sender_id);
+                        if (client_list.ContainsKey((received_message.receiver_id)))
+                        {
+                            TcpClient recipient_client = client_list[received_message.receiver_id];
+                            SendMessageToClient(recipient_client, message);
+                            UpdateOpenChatTextBox("Message forwarded to " + received_message.receiver_id);
+                        }
+                        else
+                        {
+                            UpdateOpenChatTextBox("Recipient " + received_message.receiver_id + " not found.");
+                        }
+                    }
+                }
+            }
+        }
+
+        private static List<ClientManager> client_list = [];
         private readonly HttpClient httpClient = new HttpClient();
 
-        public class Message
+
+        public class Message(int sender, int recipient, string content)
         {
-            public int sender_json { get; set; }
-            public int recipient_json { get; set; }
-            public string message_json { get; set; }
+            public int sender_id { get; set; } = sender;
+            public int receiver_id { get; set; } = recipient;
+            public string? content { get; set; } = content;
         }
 
         public ChatServerForm()
@@ -34,7 +236,7 @@ namespace ChatServer
             InitializeComponent();
         }
 
-        private void UpdateOpenChatTextBox(string message)
+        static private void UpdateOpenChatTextBox(string message)
         {
             if (OpenChatTextBox.InvokeRequired)
             {
@@ -49,12 +251,7 @@ namespace ChatServer
 
         public string CreateJsonMessage(int sender, int recipient, string message_text)
         {
-            Message message = new Message
-            {
-                sender_json = sender,
-                recipient_json = recipient,
-                message_json = message_text
-            };
+            Message message = new Message(sender, recipient, message_text);
 
             return JsonConvert.SerializeObject(message);
         }
@@ -69,6 +266,7 @@ namespace ChatServer
         {
             StreamReader reader = new StreamReader(client.GetStream());
 
+
             while (true)
             {
                 string message = "";
@@ -76,43 +274,35 @@ namespace ChatServer
                 {
                     message = await reader.ReadLineAsync();
                 }
+                else
+                {
+                    UpdateOpenChatTextBox("");
+                }
                 if (message != "")
                 {
                     Message received_message = ParseJsonMessage(message);
-                    int sender_id = received_message.sender_json;
-                    int recipient_id = received_message.recipient_json;
-                    string message_to_send = received_message.message_json;
+                    string message_to_send = received_message.content;
                     if (message_to_send == "DISCONNECT")
                     {
-                        TcpClient recipient_client = client_list[recipient_id];
+                        TcpClient recipient_client = client_list[received_message.receiver_id];
                         recipient_client.Close();
-                        client_list.Remove(recipient_id);
-                        UpdateOpenChatTextBox("Client " + sender_id + " disconnected");
+                        client_list.Remove(received_message.receiver_id);
+                        UpdateOpenChatTextBox("Client " + received_message.sender_id + " disconnected");
                     }
 
-                    UpdateOpenChatTextBox("Message from : " + sender_id);
-                    if (client_list.ContainsKey((recipient_id)))
+                    UpdateOpenChatTextBox("Message from : " + received_message.sender_id);
+                    if (client_list.ContainsKey((received_message.receiver_id)))
                     {
-                        TcpClient recipient_client = client_list[recipient_id];
+                        TcpClient recipient_client = client_list[received_message.receiver_id];
                         SendMessageToClient(recipient_client, message);
-                        UpdateOpenChatTextBox("Message forwarded to " + recipient_id);
+                        UpdateOpenChatTextBox("Message forwarded to " + received_message.receiver_id);
                     }
                     else
                     {
-                        UpdateOpenChatTextBox("Recipient " + recipient_id + " not found.");
+                        UpdateOpenChatTextBox("Recipient " + received_message.receiver_id + " not found.");
                     }
                 }
             }
-        }
-
-
-        private void SendMessageToClient(TcpClient client, string message)
-        {
-            NetworkStream network_stream = client.GetStream();
-
-            byte[] bytes_to_send = Encoding.ASCII.GetBytes(message);
-            network_stream.Write(bytes_to_send, 0, bytes_to_send.Length);
-            network_stream.Flush();
         }
 
         private void DisconnectAllClients()
@@ -141,53 +331,7 @@ namespace ChatServer
             client_list.Clear();
         }
 
-        private async void ClientConnectionThread()
-        {
-            server_socket.Start();
-            int server_port = int.Parse(PortTextBox.Text);
-            HttpClient client = new();
-            while (conn_thread_bool)
-            {
-                try 
-                {
-                    client_socket = server_socket.AcceptTcpClient();
-                }
-                catch (SocketException ex) when (ex.ErrorCode == 10004) // WSACancelBlockingCall error code
-                {
-                    UpdateOpenChatTextBox("Pending connection handled.");
-                    break;
-                }
-                IPEndPoint client_end_point = (IPEndPoint)client_socket.Client.RemoteEndPoint;
-                int client_port = client_end_point.Port;
-                UpdateOpenChatTextBox($"Client connected on port {client_port}");
-
-                string api_url = "https://localhost:8080/api/Client/CreateEdit";
-                var data = new { id = 0, port = client_port };
-                var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(data), System.Text.Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.PostAsync(api_url, content);
-
-                // Check response status
-                if (response.IsSuccessStatusCode)
-                {
-                    UpdateOpenChatTextBox("Client added to server");
-                }
-                else
-                {
-                    UpdateOpenChatTextBox($"Error: {response.StatusCode}");
-                }
-
-                client_list.Add(client_port, client_socket);
-
-                string welcome_msg = "Welcome to the chat server, Client " + client_port + "!";
-                string message_to_send = CreateJsonMessage(server_port, client_port, welcome_msg);
-                SendMessageToClient(client_socket, message_to_send);
-
-
-                Thread client_thread = new(() => HandleClientCommunication(client_socket));
-                client_thread.Start();
-            }
-        }
+        
 
         private void DeleteAllApi()
         {
@@ -225,7 +369,7 @@ namespace ChatServer
                 PortTextBox.Text = "8888";
             }
 
-            conn_thread_bool = true;
+            isAcceptingClientConnection = true;
             int port = int.Parse(PortTextBox.Text);
             server_socket = new(ip_address, port);
             m_client_th = new(ClientConnectionThread);
@@ -237,10 +381,25 @@ namespace ChatServer
         {
             UpdateOpenChatTextBox("Stopping chat server.");
             DisconnectAllClients();
-            conn_thread_bool = false;
+            isAcceptingClientConnection = false;
             m_client_th.Join();
             server_socket.Stop();
             DeleteAllApi();
         }
+
+        private void ChatServerForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void ChatServerForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            DisconnectAllClients();
+            isAcceptingClientConnection = false;
+            m_client_th.Join();
+            server_socket.Stop();
+            DeleteAllApi();
+        }
+
     }
 }
