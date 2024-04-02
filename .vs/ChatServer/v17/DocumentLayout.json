@@ -1,9 +1,17 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\DEV\\ChatServer\\",
+  "WorkspaceRootPath": "C:\\DEV\\CSharp\\ChatServer\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{D6E8C44F-03D1-4963-A9B5-AB1566395DBF}|ChatServer\\ChatServer.csproj|c:\\dev\\chatserver\\chatserver\\chatserverform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "AbsoluteMoniker": "D:0:0:{D6E8C44F-03D1-4963-A9B5-AB1566395DBF}|ChatServer\\ChatServer.csproj|c:\\dev\\csharp\\chatserver\\chatserver\\chatserverform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D6E8C44F-03D1-4963-A9B5-AB1566395DBF}|ChatServer\\ChatServer.csproj|solutionrelative:chatserver\\chatserverform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D6E8C44F-03D1-4963-A9B5-AB1566395DBF}|ChatServer\\ChatServer.csproj|c:\\dev\\csharp\\chatserver\\chatserver\\chatserverform.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D6E8C44F-03D1-4963-A9B5-AB1566395DBF}|ChatServer\\ChatServer.csproj|solutionrelative:chatserver\\chatserverform.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D6E8C44F-03D1-4963-A9B5-AB1566395DBF}|ChatServer\\ChatServer.csproj|c:\\dev\\csharp\\chatserver\\chatserver\\chatserverform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
       "RelativeMoniker": "D:0:0:{D6E8C44F-03D1-4963-A9B5-AB1566395DBF}|ChatServer\\ChatServer.csproj|solutionrelative:chatserver\\chatserverform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     }
   ],
@@ -14,7 +22,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -30,11 +38,37 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ChatServerForm.Designer.cs",
+              "DocumentMoniker": "C:\\DEV\\CSharp\\ChatServer\\ChatServer\\ChatServerForm.Designer.cs",
+              "RelativeDocumentMoniker": "ChatServer\\ChatServerForm.Designer.cs",
+              "ToolTip": "C:\\DEV\\CSharp\\ChatServer\\ChatServer\\ChatServerForm.Designer.cs",
+              "RelativeToolTip": "ChatServer\\ChatServerForm.Designer.cs",
+              "ViewState": "AQIAAJAAAAAAAAAAAAAQwJ8AAAAhAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-04-02T15:07:50.1Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "ChatServerForm.cs [\uB514\uC790\uC778]",
-              "DocumentMoniker": "C:\\DEV\\ChatServer\\ChatServer\\ChatServerForm.cs",
+              "Title": "ChatServerForm.cs",
+              "DocumentMoniker": "C:\\DEV\\CSharp\\ChatServer\\ChatServer\\ChatServerForm.cs",
               "RelativeDocumentMoniker": "ChatServer\\ChatServerForm.cs",
-              "ToolTip": "C:\\DEV\\ChatServer\\ChatServer\\ChatServerForm.cs [\uB514\uC790\uC778]",
+              "ToolTip": "C:\\DEV\\CSharp\\ChatServer\\ChatServer\\ChatServerForm.cs",
+              "RelativeToolTip": "ChatServer\\ChatServerForm.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAUAAAARAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-04-02T13:20:37.495Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ChatServerForm.cs [\uB514\uC790\uC778]",
+              "DocumentMoniker": "C:\\DEV\\CSharp\\ChatServer\\ChatServer\\ChatServerForm.cs",
+              "RelativeDocumentMoniker": "ChatServer\\ChatServerForm.cs",
+              "ToolTip": "C:\\DEV\\CSharp\\ChatServer\\ChatServer\\ChatServerForm.cs [\uB514\uC790\uC778]",
               "RelativeToolTip": "ChatServer\\ChatServerForm.cs [\uB514\uC790\uC778]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-04-02T05:28:24.742Z",

@@ -158,7 +158,6 @@
             Margin = new Padding(4, 4, 4, 4);
             Name = "ChatServerForm";
             Text = "Chat Server";
-            Load += ChatServerForm_Load;
             splitContainer1.Panel1.ResumeLayout(false);
             splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
@@ -173,9 +172,9 @@
         private Button ServerStopButton;
         private Label OpenChatLabel;
         private SplitContainer splitContainer1;
-        private TextBox OpenChatTextBox;
-        static private TextBox IPAddressTextBox;
-        static private TextBox PortTextBox;
+        static private TextBox OpenChatTextBox;
+        static public TextBox IPAddressTextBox;
+        static public TextBox PortTextBox;
         private Label IPAddressLabel;
         private Label PortLabel;
     }

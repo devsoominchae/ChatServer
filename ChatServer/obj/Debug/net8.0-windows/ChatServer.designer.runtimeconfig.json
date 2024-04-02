@@ -12,8 +12,8 @@
       }
     ],
     "additionalProbingPaths": [
-      "C:\\Users\\pinnaclesoft\\.dotnet\\store\\|arch|\\|tfm|",
-      "C:\\Users\\pinnaclesoft\\.nuget\\packages",
+      "C:\\Users\\cothc\\.dotnet\\store\\|arch|\\|tfm|",
+      "C:\\Users\\cothc\\.nuget\\packages",
       "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
     ],
     "configProperties": {
