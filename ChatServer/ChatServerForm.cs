@@ -158,7 +158,7 @@ public class ServerManager()
             }
 
             UpdateOpenChatTextBox($"Client connected on port {client_manager.connected_port}");
-            // rest_api_manager.UploadClienttoRESTAPI(client_manager);
+            rest_api_manager.UploadClienttoRESTAPI(client_manager);
 
             connected_port_client_manager_pairs.Add(client_manager.connected_port, client_manager);
 
@@ -355,7 +355,7 @@ namespace ChatServer
         private void ServerStartButton_Click(object sender, EventArgs e)
         {
             server_manager = new ServerManager();
-            // server_manager.rest_api_manager.DeleteAllClients();
+            server_manager.rest_api_manager.DeleteAllClients();
 
             server_manager.StartChatServer();
         }
