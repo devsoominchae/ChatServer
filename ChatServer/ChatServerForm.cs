@@ -12,6 +12,11 @@ using System.Windows.Forms;
 using Newtonsoft.Json;
 using static ChatServer.ChatServerForm;
 
+public class CommonDataManager
+{
+    public ConcurrentQueue<int> q_client_port_to_upload = new();
+}
+
 public class Message(int sender, int recipient, string content)
 {
     public int SenderID { get; set; } = sender;
@@ -25,14 +30,44 @@ public class RESTAPIManager
     string delete_all_api_url = "https://localhost:8080/api/Client/DeleteAll";
     HttpClient rest_api_client = new();
 
-    public async void UploadClienttoRESTAPI(ClientManager client_manager)
-    {
-        var data = new { id = 0, port = client_manager.connected_port };
-        var Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(data), System.Text.Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await rest_api_client.PostAsync(create_edit_api_url, Content);
+    Thread m_upload_client_to_RESTAPI_th;
+    CommonDataManager m_common_data_manager;
 
-        string http_request_type = "Add client to server";
-        CheckResponse(response, http_request_type);
+    bool isUploadingClientsToRESTAPI = false;
+
+    RESTAPIManager(CommonDataManager common_data_manager)
+    {
+        m_common_data_manager = common_data_manager;
+        StartUploadingClientsToRESTAPI();
+    }
+
+    private void StartUploadingClientsToRESTAPI()
+    {
+        isUploadingClientsToRESTAPI = true;
+
+        m_upload_client_to_RESTAPI_th = new(UploadClienToRESTAPI);
+        m_upload_client_to_RESTAPI_th.Start();
+    }
+
+    public async void UploadClienToRESTAPI()
+    {
+        while(isUploadingClientsToRESTAPI)
+        {
+            if (m_common_data_manager.q_client_port_to_upload.TryDequeue(out int connected_port))
+            {
+                var data = new { id = 0, port = connected_port };
+                var Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(data), System.Text.Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await rest_api_client.PostAsync(create_edit_api_url, Content);
+
+                string http_request_type = "Add client to server";
+                CheckResponse(response, http_request_type);
+            }
+            else
+            {
+                Thread.Sleep(100);
+            }
+
+        }
     }
 
     public void DeleteAllClients()
@@ -121,7 +156,13 @@ public class ServerManager()
         SetIPAddress();
         SetPort();
 
-        isAcceptingClientConnection = true;
+        StartAcceptingClientConnection();
+
+        if (!assertIPAddressAndPort())
+        {
+            UpdateOpenChatTextBox($"IP Address status : {isIPAddressSet} Port status : {isPortSet}");
+            return;
+        }
 
         server_socket = new(m_ip_address, m_port);
         server_socket.Start();
@@ -137,12 +178,6 @@ public class ServerManager()
 
     private void AcceptClientConnection()
     {
-        if (!assertIPAddressAndPort())
-        {
-            UpdateOpenChatTextBox($"IP Address status : {isIPAddressSet} Port status : {isPortSet}");
-            return;
-        }
-
         ClientManager client_manager;
         while (isAcceptingClientConnection)
         {
@@ -169,6 +204,7 @@ public class ServerManager()
             client_manager.SetStreamReader();
             client_manager.StartReceivingMessage();
             client_manager.StartSendingMessage();
+            StartProcessingMessage(client_manager);
         }
     }
 
